@@ -1972,6 +1972,10 @@ static void dispc_stop_for_feature(struct sprdfb_device *dev)
 		while (dispc_read(DISPC_DPI_STS1) & BIT(16)) {
 			if (!(++i % 500000))
 				pr_warn("[LCD] %s, busy waiting stop\n", __func__);
+			if (i >= 5000000) {
+				pr_err("[LCD] %s, stop stuck, giving up\n", __func__);
+				break;
+			}
 		}
 		udelay(25);
 	}

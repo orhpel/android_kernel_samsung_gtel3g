@@ -106,7 +106,12 @@ int sprd_iommu_gsp_init(struct sprd_iommu_dev *dev, struct sprd_iommu_init_data 
 	dev->early_suspend.suspend = sprd_iommu_gsp_early_suspend;
 	dev->early_suspend.resume  = sprd_iommu_gsp_late_resume;
 	dev->early_suspend.level   = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
-	register_early_suspend(&dev->early_suspend);
+	/* gtel3g/Android 10: the display pipeline is driven exclusively by HWC
+	 * setPowerMode -> FBIOBLANK -> sprdfb_blank().  Leaving it on the
+	 * earlysuspend chain makes any /sys/power/state write from
+	 * android.system.suspend blank the panel behind SurfaceFlinger's back.
+	 */
+	/* register_early_suspend(&dev->early_suspend); */
 #endif
 
 	sprd_iommu_gsp_enable(dev);

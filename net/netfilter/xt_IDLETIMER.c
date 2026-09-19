@@ -42,6 +42,7 @@
 #include <linux/skbuff.h>
 #include <linux/workqueue.h>
 #include <linux/sysfs.h>
+#include <linux/time.h>
 #include <net/net_namespace.h>
 
 struct idletimer_tg_attr {
@@ -68,30 +69,62 @@ static DEFINE_MUTEX(list_mutex);
 
 static struct kobject *idletimer_tg_kobj;
 
-static void notify_netlink_uevent(const char *label, struct idletimer_tg *timer)
+/*
+ * Emit the uevent key names that Android userspace has expected since
+ * android-4.4.  Android 10's netd (system/netd/server/NetlinkHandler.cpp,
+ * the "xt_idletimer" branch of onEvent()) does:
+ *
+ *	const char *label = evt->findParam("INTERFACE");
+ *	...
+ *	if (android::base::ParseInt(label, &intLabel)) {
+ *
+ * ParseInt() has no NULL check, so when this driver sent the historical
+ * "LABEL=" key netd dereferenced a NULL pointer and died with
+ * SIGSEGV/SEGV_MAPERR at fault address 0 inside NetlinkHandler::onEvent().
+ * netd is a critical service with "onrestart restart zygote", so a single
+ * idle timer notification tore down zygote and system_server, which in turn
+ * made the Watchdog ANR-dump (and therefore kill) surfaceflinger.
+ *
+ * UID is deliberately left out: this kernel does not track a responsible uid
+ * per idle timer, and netd already treats a missing UID as "unknown" (-1),
+ * which is more honest than reporting uid 0.
+ */
+static void notify_netlink_uevent(const char *iface, struct idletimer_tg *timer)
 {
-	char label_msg[NLMSG_MAX_SIZE];
+	char iface_msg[NLMSG_MAX_SIZE];
 	char state_msg[NLMSG_MAX_SIZE];
-	char *envp[] = { label_msg, state_msg, NULL };
+	char timestamp_msg[NLMSG_MAX_SIZE];
+	char *envp[] = { iface_msg, state_msg, timestamp_msg, NULL };
+	struct timespec ts;
+	u64 time_ns;
 	int res;
 
-	res = snprintf(label_msg, NLMSG_MAX_SIZE, "LABEL=%s",
-		       label);
+	res = snprintf(iface_msg, NLMSG_MAX_SIZE, "INTERFACE=%s", iface);
 	if (NLMSG_MAX_SIZE <= res) {
 		pr_err("message too long (%d)", res);
 		return;
 	}
+
 	res = snprintf(state_msg, NLMSG_MAX_SIZE, "STATE=%s",
 		       timer->active ? "active" : "inactive");
 	if (NLMSG_MAX_SIZE <= res) {
 		pr_err("message too long (%d)", res);
 		return;
 	}
-	pr_debug("putting nlmsg: <%s> <%s>\n", label_msg, state_msg);
+
+	/* netd compares this against SystemClock.elapsedRealtimeNanos(). */
+	get_monotonic_boottime(&ts);
+	time_ns = (u64)timespec_to_ns(&ts);
+	res = snprintf(timestamp_msg, NLMSG_MAX_SIZE, "TIME_NS=%llu", time_ns);
+	if (NLMSG_MAX_SIZE <= res) {
+		pr_err("message too long (%d)", res);
+		return;
+	}
+
+	pr_debug("putting nlmsg: <%s> <%s> <%s>\n", iface_msg, state_msg,
+		 timestamp_msg);
 	kobject_uevent_env(idletimer_tg_kobj, KOBJ_CHANGE, envp);
 	return;
-
-
 }
 
 static

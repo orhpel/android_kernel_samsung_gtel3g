@@ -1546,7 +1546,10 @@ static int32_t GSP_work_around1(gsp_user* pUserdata)
             ret = GSP_KERNEL_WORKAROUND_WAITDONE_INTR;
     }
 
-    GSP_Wait_Finish();//wait busy-bit down
+    if (GSP_Wait_Finish()) {//wait busy-bit down, bounded (hybrid27)
+        printk("%s:pid:0x%08x, gsp busy-bit stuck, abort frame! L%d \n",__func__,pUserdata->pid,__LINE__);
+        ret = GSP_KERNEL_WORKAROUND_WAITDONE_TIMEOUT;
+    }
     GSP_IRQSTATUS_CLEAR();
     GSP_IRQENABLE_SET(GSP_IRQ_TYPE_DISABLE);
     sema_init(&gsp_wait_interrupt_sem,0);
@@ -1603,7 +1606,11 @@ static int32_t GSP_work_around1(gsp_user* pUserdata)
                 break;
             }
 
-            GSP_Wait_Finish();//wait busy-bit down
+            if (GSP_Wait_Finish()) {//wait busy-bit down, bounded (hybrid27)
+                printk("%s%d:pid:0x%08x, gsp busy-bit stuck, abort frame!\n",__func__,__LINE__,pUserdata->pid);
+                ret = GSP_KERNEL_WORKAROUND_WAITDONE_TIMEOUT;
+                break;
+            }
             GSP_IRQSTATUS_CLEAR();
             GSP_IRQENABLE_SET(GSP_IRQ_TYPE_DISABLE);
             sema_init(&gsp_wait_interrupt_sem,0);
@@ -2481,7 +2488,10 @@ static long gsp_drv_ioctl(struct file *file,
                     ret = GSP_KERNEL_FORCE_EXIT;
                 }
 
-                GSP_Wait_Finish();//wait busy-bit down
+                if (GSP_Wait_Finish()) {//wait busy-bit down, bounded (hybrid27)
+                    printk("%s:pid:0x%08x, gsp busy-bit stuck, abort frame! L%d \n",__func__,pUserdata->pid,__LINE__);
+                    ret = GSP_KERNEL_WAITDONE_TIMEOUT;
+                }
                 GSP_Unmap();
                 GSP_Cache_Invalidate();
                 GSP_Deinit();
@@ -3026,7 +3036,12 @@ int32_t gsp_drv_probe(struct platform_device *pdev)
     s_earlysuspend.suspend = gsp_early_suspend;
     s_earlysuspend.resume  = gsp_late_resume;
     s_earlysuspend.level   = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
-    register_early_suspend(&s_earlysuspend);
+    /* gtel3g/Android 10: the display pipeline is driven exclusively by HWC
+     * setPowerMode -> FBIOBLANK -> sprdfb_blank().  Leaving it on the
+     * earlysuspend chain makes any /sys/power/state write from
+     * android.system.suspend blank the panel behind SurfaceFlinger's back.
+     */
+    /* register_early_suspend(&s_earlysuspend); */
 #endif
 
     return ret;

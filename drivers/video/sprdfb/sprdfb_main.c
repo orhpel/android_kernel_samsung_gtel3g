@@ -740,7 +740,12 @@ static int sprdfb_probe(struct platform_device *pdev)
 	dev->early_suspend.suspend = sprdfb_early_suspend;
 	dev->early_suspend.resume  = sprdfb_late_resume;
 	dev->early_suspend.level   = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-	register_early_suspend(&dev->early_suspend);
+	/* gtel3g/Android 10: the display pipeline is driven exclusively by HWC
+	 * setPowerMode -> FBIOBLANK -> sprdfb_blank().  Leaving it on the
+	 * earlysuspend chain makes any /sys/power/state write from
+	 * android.system.suspend blank the panel behind SurfaceFlinger's back.
+	 */
+	/* register_early_suspend(&dev->early_suspend); */
 #endif
 
 #ifdef CONFIG_FB_ESD_SUPPORT

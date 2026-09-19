@@ -469,7 +469,7 @@ GSP_CORE_GREQ;
     PUBLIC void GSP_Deinit(void);
     PUBLIC void GSP_ConfigLayer(GSP_MODULE_ID_E layer_id);
     PUBLIC uint32_t GSP_Trigger(void);
-    PUBLIC void GSP_Wait_Finish(void);
+    PUBLIC int GSP_Wait_Finish(void);
     PUBLIC void GSP_module_enable(void);
     PUBLIC void GSP_module_disable(void);
 

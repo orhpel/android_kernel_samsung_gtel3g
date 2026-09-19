@@ -17,6 +17,8 @@
 //#include <linux/irq.h>
 
 #include <mach/hardware.h>
+#include <linux/delay.h>
+#include <linux/errno.h>
 
 #include "gsp_config_if.h"
 uint32_t testregsegment[0x190]= {0};
@@ -224,15 +226,25 @@ PUBLIC void GSP_ConfigLayer(GSP_MODULE_ID_E layer_id)
     }
 }
 
-PUBLIC void GSP_Wait_Finish(void)
+/* gtel3g hybrid27: bound the formerly infinite gsp_busy poll. A wedged
+ * engine (e.g. clock gated mid-frame during a display blank race) used to
+ * hang the caller forever in kernel: unkillable, undumpable, whole display
+ * pipeline dead with SF stuck in presentDisplay. Bail out after ~0.5s so
+ * the frame fails loudly instead. */
+#define GSP_WAIT_FINISH_MAX_POLL 1000000
+PUBLIC int GSP_Wait_Finish(void)
 {
-    while(1)
+    int i = 0;
+    while (GSP_WORKSTATUS_GET() != 0)
     {
-        if(GSP_WORKSTATUS_GET() == 0)
+        cpu_relax();
+        if (++i >= GSP_WAIT_FINISH_MAX_POLL)
         {
-            break;
+            printk(KERN_ERR "sprd_gsp: [%s] gsp_busy stuck, giving up!\n", __FUNCTION__);
+            return -ETIMEDOUT;
         }
     }
+    return 0;
 }
 
 

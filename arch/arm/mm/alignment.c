@@ -80,7 +80,7 @@ static unsigned long ai_half;
 static unsigned long ai_word;
 static unsigned long ai_dword;
 static unsigned long ai_multi;
-static int ai_usermode;
+static int ai_usermode = 2;		/* UM_FIXUP, see safe_usermode() */
 
 core_param(alignment, ai_usermode, int, 0600);
 
@@ -105,6 +105,18 @@ static int safe_usermode(int new_usermode, bool warn)
 	 * CPUs since we spin re-faulting the instruction without
 	 * making any progress.
 	 */
+	/*
+	 * gtel3g: the Spreadtrum ION heaps are mapped into userspace as
+	 * strongly-ordered memory, where the CPU raises an alignment fault
+	 * even for the plain unaligned LDR/STR that ARMv7 handles in
+	 * hardware on normal memory.  Userspace then dies with
+	 * SIGBUS/BUS_ADRALN (e.g. NuMediaExtractor::appendVorbisNumPageSamples
+	 * writing 4 bytes into an AMediaCodec input buffer).  Always emulate
+	 * unaligned userspace accesses instead of signalling, whatever
+	 * init.rc asks for.
+	 */
+	new_usermode = (new_usermode & ~UM_SIGNAL) | UM_FIXUP;
+
 	if (cpu_is_v6_unaligned() && !(new_usermode & (UM_FIXUP | UM_SIGNAL))) {
 		new_usermode |= UM_FIXUP;
 
@@ -720,8 +732,60 @@ do_alignment_t32_to_handler(unsigned long *pinstr, struct pt_regs *regs,
 			*pinstr = subset[L] | (1<<RD_BITS(instr));
 			return do_alignment_ldmstm;
 		}
-		/* Else fall through for illegal instruction case */
-		break;
+		/* Else fall through to the word load/store handling below */
+
+	/*
+	 * A6.3.7 - A6.3.10 Load/store single data item, word size.
+	 *
+	 * Upstream skips these on purpose, see the comment further down:
+	 * "no need to handle load/store instructions up to word size since
+	 * ARMv6 and later CPUs can perform unaligned accesses".  That only
+	 * holds for Normal memory.  Spreadtrum maps ION/dmabuf buffers as
+	 * Device/strongly-ordered, where the core raises an alignment fault
+	 * for every unaligned access, a plain LDR included; we then land here,
+	 * return NULL, and do_alignment() kills the task with SIGBUS/BUS_ADRALN
+	 * no matter what /proc/cpu/alignment says.  Android's media stack trips
+	 * over this constantly - f8501c04, "ldr.w r1, [r0, #-4]", the 4-byte
+	 * read of the Vorbis page-sample count at the tail of a codec input
+	 * buffer in C2SoftVorbisDec::process(), killed media.swcodec on every
+	 * UI sound.  Emulate the access instead of refusing it.
+	 *
+	 * Rn (19:16), Rt (15:12) and L (20) already sit where the ARM encoding
+	 * expects them, but P/U/W do not: the T4 form keeps them in
+	 * tinst2[10:8], and the T3/T2 forms are implicitly P=1 U=1 W=0.  So
+	 * rebuild the opcode as an ARM "LDR/STR immediate" and hand the
+	 * pre-computed offset to the normal handler - the same trick the
+	 * PUSH/POP T3 case above already uses.
+	 */
+	case 0xf8c0:		/* STR/LDR (T3 imm12, T4 imm8, T2 register) */
+	{
+		u32 Rn = tinst1 & 0x000f;
+		u32 Rt = (tinst2 >> 12) & 0x000f;
+		u32 L = (tinst1 >> 4) & 1;
+		u32 P = 1, U = 1, W = 0;
+
+		/* literal pools are always aligned; never rewrite the PC */
+		if (Rn == 15 || Rt == 15)
+			break;
+
+		if (tinst1 & 0x0080) {			/* T3: imm12 */
+			poffset->un = tinst2 & 0x0fff;
+		} else if (tinst2 & 0x0800) {		/* T4: 1 P U W imm8 */
+			P = (tinst2 >> 10) & 1;
+			U = (tinst2 >> 9) & 1;
+			W = (tinst2 >> 8) & 1;
+			poffset->un = tinst2 & 0x00ff;
+		} else if ((tinst2 & 0x0fc0) == 0) {	/* T2: Rm LSL imm2 */
+			poffset->un = regs->uregs[tinst2 & 0x000f] <<
+					((tinst2 >> 4) & 3);
+		} else {
+			break;				/* unknown form */
+		}
+
+		*pinstr = 0xe5000000 | (P << 24) | (U << 23) | (W << 21) |
+			  (L << 20) | (Rn << 16) | (Rt << 12);
+		return do_alignment_ldrstr;
+	}
 
 	/* A6.3.6 Load/store double, STRD/LDRD(immed, lit, reg) */
 	case 0xe860:

@@ -342,7 +342,12 @@ static int rt8555_backlight_probe(struct i2c_client *client,
 	pdata->early_suspend_desc.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
 	pdata->early_suspend_desc.suspend = rt8555_backlight_earlysuspend;
 	pdata->early_suspend_desc.resume = rt8555_backlight_earlyresume;
-	register_early_suspend(&pdata->early_suspend_desc);
+	/* gtel3g/Android 10: the display pipeline is driven exclusively by HWC
+	 * setPowerMode -> FBIOBLANK -> sprdfb_blank().  Leaving it on the
+	 * earlysuspend chain makes any /sys/power/state write from
+	 * android.system.suspend blank the panel behind SurfaceFlinger's back.
+	 */
+	/* register_early_suspend(&pdata->early_suspend_desc); */
 #endif
 
 	info->client = client;

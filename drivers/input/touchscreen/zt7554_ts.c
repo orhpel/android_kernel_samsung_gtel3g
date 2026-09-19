@@ -17,6 +17,8 @@
 #include "zt7554_ts.h"
 #include "zinitix_touch_t560.h"
 #include "zinitix_touch_t560_G1F.h"
+#include <linux/fb.h>
+#include <linux/notifier.h>
 
 #ifdef ZINITIX_ZT7554_USE_DUAL_FW
 static void zt7554_firmware_check(struct zt7554_ts_info *info)
@@ -1554,6 +1556,57 @@ static void zt7554_ts_early_suspend(struct early_suspend *h)
 	up(&info->work_lock);
 	return;
 }
+
+/*
+ * gtel3g / Android 10 -------------------------------------------------------
+ * The earlysuspend chain is dead on Q: android.system.suspend only ever writes
+ * "mem" to /sys/power/state and never writes "on", so early_suspend handlers
+ * run but late_resume handlers never do.  That is why this driver used to get
+ * stuck with work_state == EALRY_SUSPEND and the IC powered off.
+ *
+ * Simply not registering on that chain (the previous attempt) is not enough
+ * either: it leaves the TSP powered and polling while the panel is blanked,
+ * and this board is built with CONFIG_LCD_ESD_RECOVERY_BY_TSP=y.  In that
+ * configuration ts_read_coord() calls ESD_recover() -> sprdfb dispc
+ * esd_reset() whenever the controller reports burst mode, and ts_tmr_work()
+ * power-cycles the TSP rail every CHECK_ESD_TIMER seconds.  Both of those run
+ * against a suspended DISPC and fight the sprdfb blank/unblank sequence.
+ *
+ * Hook the framebuffer notifier instead.  fb_blank() - which is where HWC
+ * setPowerMode -> FBIOBLANK ends up - emits FB_EARLY_EVENT_BLANK before
+ * sprdfb_blank() and FB_EVENT_BLANK after it.  That gives us exactly the
+ * pairing earlysuspend used to provide, driven by the one power path Android
+ * 10 actually uses: TSP down just before the panel goes off, TSP up right
+ * after the panel is back.
+ */
+static int zt7554_ts_fb_notifier_call(struct notifier_block *nb,
+		unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int blank;
+
+	if (!misc_info || !evdata || !evdata->data)
+		return 0;
+
+	if (event != FB_EARLY_EVENT_BLANK && event != FB_EVENT_BLANK)
+		return 0;
+
+	blank = *(int *)evdata->data;
+
+	if (event == FB_EARLY_EVENT_BLANK) {
+		if (blank != FB_BLANK_UNBLANK)
+			zt7554_ts_early_suspend(NULL);	/* panel about to go off */
+	} else {
+		if (blank == FB_BLANK_UNBLANK)
+			zt7554_ts_late_resume(NULL);	/* panel already back on */
+	}
+
+	return 0;
+}
+
+static struct notifier_block zt7554_ts_fb_notif = {
+	.notifier_call = zt7554_ts_fb_notifier_call,
+};
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
 #if defined(CONFIG_PM)
@@ -3448,7 +3501,15 @@ static int zt7554_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	info->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	info->early_suspend.suspend = zt7554_ts_early_suspend;
 	info->early_suspend.resume = zt7554_ts_late_resume;
-	register_early_suspend(&info->early_suspend);
+	/*
+	 * Android 10 (system_suspend) only ever writes "mem" to /sys/power/state and
+	 * never writes "on", so the earlysuspend chain runs early_suspend but never
+	 * late_resume.  Any driver that powers itself down here stays down forever.
+	 * Leave this device permanently resumed instead.
+	 */
+	/* register_early_suspend(&info->early_suspend); */
+	if (fb_register_client(&zt7554_ts_fb_notif))
+		dev_err(&client->dev, "failed to register fb notifier\n");
 #endif
 
 #if defined(CONFIG_PM_RUNTIME)
@@ -3487,7 +3548,8 @@ err_misc_register:
 #endif
 	free_irq(info->irq, info);
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&info->early_suspend);
+	/* unregister_early_suspend(&info->early_suspend); not registered, see probe */
+	fb_unregister_client(&zt7554_ts_fb_notif);
 #endif
 err_request_irq:
 err_gpio_irq:
@@ -3539,7 +3601,8 @@ static int zt7554_ts_remove(struct i2c_client *client)
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&info->early_suspend);
+	/* unregister_early_suspend(&info->early_suspend); not registered, see probe */
+	fb_unregister_client(&zt7554_ts_fb_notif);
 #endif
 
 	if (gpio_is_valid(pdata->gpio_int) != 0)
