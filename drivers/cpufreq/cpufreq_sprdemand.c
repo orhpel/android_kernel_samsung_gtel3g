@@ -2045,10 +2045,12 @@ static int __init cpufreq_gov_dbs_init(void)
 	g_sd_tuners = kzalloc(sizeof(struct sd_dbs_tuners), GFP_KERNEL);
 
 
+#ifndef CONFIG_SPRD_CPU_DYNAMIC_HOTPLUG
 	if(input_register_handler(&dbs_input_handler))
 	{
 		pr_err("[DVFS] input_register_handler failed\n");
 	}
+#endif
 
 #if defined(CONFIG_THERMAL)
 	platform_driver_register(&cpu_cooling_driver);
@@ -2067,9 +2069,9 @@ static void __exit cpufreq_gov_dbs_exit(void)
 #if defined(CONFIG_THERMAL)
 	platform_driver_unregister(&cpu_cooling_driver);
 #endif
-
+#ifndef CONFIG_SPRD_CPU_DYNAMIC_HOTPLUG
 	input_unregister_handler(&dbs_input_handler);
-
+#endif
 }
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
