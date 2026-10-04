@@ -1980,7 +1980,15 @@ static void GSP_Release_HWSema(void)
     pTempUserdata->pid = INVALID_USER_ID;
     sema_init(&pTempUserdata->sem_open, 1);
 
-    GSP_Wait_Finish();//wait busy-bit down
+    /* gtel3g: recovery path for a client killed while holding the GSP hw
+     * semaphore. An unbounded wait here leaves the engine's busy bit set and
+     * every later GSP_IO_SET_PARAM returns GSP_KERNEL_WAITDONE_TIMEOUT (0x8C),
+     * which makes hwcomposer fall back to software compositing. Bound it.
+     */
+    if (GSP_Wait_Finish())
+    {
+        printk(KERN_ERR "sprd_gsp: [GSP_Release_HWSema] busy-bit stuck, giving up!\n");
+    }
     GSP_Deinit();
     gsp_cur_client_pid = INVALID_USER_ID;
     sema_init(&gsp_wait_interrupt_sem,0);

@@ -240,6 +240,11 @@ PUBLIC int GSP_Wait_Finish(void)
         cpu_relax();
         if (++i >= GSP_WAIT_FINISH_MAX_POLL)
         {
+                    /* gtel3g: bounded wait. The engine can hold busy=1 forever after
+             * a resume (see the auto-gate fix in pm-scx35.c), so never spin
+             * here: an unbounded poll is unkillable and takes the whole display
+             * pipeline with it.
+             */
             printk(KERN_ERR "sprd_gsp: [%s] gsp_busy stuck, giving up!\n", __FUNCTION__);
             return -ETIMEDOUT;
         }

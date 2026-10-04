@@ -110,6 +110,8 @@ int sprd_iommu_gsp_init(struct sprd_iommu_dev *dev, struct sprd_iommu_init_data 
 	 * setPowerMode -> FBIOBLANK -> sprdfb_blank().  Leaving it on the
 	 * earlysuspend chain makes any /sys/power/state write from
 	 * android.system.suspend blank the panel behind SurfaceFlinger's back.
+	 * Re-tested 2026-09-30 (hybrid31): re-enabling this changed nothing about
+	 * the static-screen bug, which lives in userspace hwcomposer, not here.
 	 */
 	/* register_early_suspend(&dev->early_suspend); */
 #endif
@@ -180,7 +182,7 @@ int sprd_iommu_gsp_backup(struct sprd_iommu_dev *dev)
 	mutex_lock(&dev->mutex_map);
 	printk("%s, map_count:%d\n", __FUNCTION__, dev->map_count);
 	if (dev->map_count > 0)
-		err = sprd_iommu_backup(dev);
+		err = sprd_iommu_restore(dev);
 	mutex_unlock(&dev->mutex_map);
 
 	return err;

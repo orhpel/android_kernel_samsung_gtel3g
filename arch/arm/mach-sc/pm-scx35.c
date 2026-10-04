@@ -357,7 +357,16 @@ void disable_ahb_module(void)
 	sci_glb_set(REG_AP_AHB_MCU_PAUSE, BIT_MCU_DEEP_SLEEP_EN);
 
 	//AP_SYS_AUTO_SLEEP_CFG
+	// gtel3g hybrid39: keep bit 8 (BIT_GSP_AUTO_GATE_EN) set on the way into
+	// suspend. The stock 0x3B below leaves it cleared, and that is the state the
+	// device comes back in, which is where the GSP wedges (busy=1 forever,
+	// errcode=0, hwcomposer falls back to ~720ms/frame software compositing).
+	// Running state is 0x13b (bit 8 = 1). See the resume path in
+	// bak_restore_ahb() for the measured before/after values.
 	sci_glb_set(REG_AP_AHB_AP_SYS_AUTO_SLEEP_CFG, 0x3B);
+	sci_glb_set(REG_AP_AHB_AP_SYS_AUTO_SLEEP_CFG, BIT_GSP_AUTO_GATE_EN);
+	printk(KERN_ERR "pm-scx35: H39 suspend auto_sleep_cfg=0x%08x (bit8 SET)\n",
+		sci_glb_read(REG_AP_AHB_AP_SYS_AUTO_SLEEP_CFG, -1UL));
 
 	return;
 }
@@ -376,6 +385,23 @@ void bak_restore_ahb(int bak)
 		sci_glb_write(REG_AP_AHB_CA7_CKG_CFG, 	ap_ahb_reg_saved.ca7_ckg_cfg, -1UL);
 		sci_glb_write(REG_AP_AHB_MISC_CKG_EN, 	ap_ahb_reg_saved.misc_ckg_en, -1UL);
 		sci_glb_write(REG_AP_AHB_MISC_CFG, 	ap_ahb_reg_saved.misc_cfg, -1UL);
+
+		/* gtel3g hybrid39: the GSP wedges after a resume because this register is
+		 * left at 0x3b (bit 8 = 0) on the way out of deep sleep.
+		 *
+		 * Measured bit-by-bit on the device:
+		 *   before sleep : 0x13b = 0b100111011  (bit 8 = 1)  engine healthy, busy=0
+		 *   after resume : 0x3b  = 0b000111011  (bit 8 = 0)  engine stuck,  busy=1
+		 *
+		 * So bit 8 (BIT_GSP_AUTO_GATE_EN) going 1 -> 0 is what precedes the wedge,
+		 * not the reverse -- hybrid38 cleared this bit and made the state worse.
+		 * Set it back here so the auto-gate block is re-armed after the power
+		 * domain comes back. Only bit 8 is touched; the other auto-gate bits in
+		 * this register (EMC gate, CA7 core gate) are left as suspend left them.
+		 */
+		sci_glb_set(REG_AP_AHB_AP_SYS_AUTO_SLEEP_CFG, BIT_GSP_AUTO_GATE_EN);
+		printk(KERN_ERR "pm-scx35: H39 resume auto_sleep_cfg=0x%08x (bit8 SET)\n",
+			sci_glb_read(REG_AP_AHB_AP_SYS_AUTO_SLEEP_CFG, -1UL));
 	}
 	return;
 }
