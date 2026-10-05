@@ -452,7 +452,19 @@ ENTRY(sp_pm_collapse)
 	add	r0, r0, r1
 #endif
 
-	stmia   r0!, {r4-r14}
+	/* gtel3g thumb-2 build start
+	/* We have to do a little improvisation here und loose some weight
+	 * If we remove r12, r13 from the list, we get a {r4-r11, lr} = r4,r5,r6,r7,r8,r9,r10,r11,r14 = 9 registers = 36 bytes. => B1NG0
+	 * We *should* be save doing this:
+	 * r12 (IP) is caller-saved in the AAPCS, so no need to preserve.
+	 * r13 (SP) could cause problems. But why would someone save it in registry list during standby?
+	 *          Typically it shouldn't change during standby, but if the surrounding code relies on that -> there could be.. subtle... issues
+	 *          It works, but it has to stay between me and you:
+	 *          I somebody asks you: You haven't seen the stack pointer, either, ok?
+	 *          EXACTLY! These are not the droids you are looking for!
+	stmia   r0!, {r4-r14} --> stmia   r0!, {r4-r11, lr} */
+	stmia   r0!, {r4-r11, lr}
+	/* gtel3g thumb-2 build stop */
 #if 0
 	mov r5, r0
 	cmp	r3, #1
@@ -520,7 +532,12 @@ go_on:
 	mul	r2, r2, r1
 	add	r0, r0, r2
 #endif
-	ldmfd   r0, {r4-r14}		 /* restore registers */
+/* gtel3g thumb build start
+/* see description in first occurence
+/* If we remove r12, r13 from the list, we get a {r4-r11, lr} = r4,r5,r6,r7,r8,r9,r10,r11,r14 = 9 registers = 36 bytes. => B1NG0
+	ldmfd   r0, {r4-r14}		 // restore registers */
+ldmfd   r0, {r4-r11, lr}
+/* gtel3g thumb build stop */
 	mov     r0, #0                   /* return power collapse failed */
 	bx      lr
 ENDPROC(sp_pm_collapse)
@@ -554,8 +571,12 @@ ENTRY(sp_pm_collapse_exit)
 	mcr     p15, 0, r11, c13, c0, 4 /* TPIDRURW */
 	mcr     p15, 0, r12, c13, c0, 1 /* context ID */
 	isb
-	ldmdb   r1!, {r4-r14}
-
+/* gtel3g thumb build start
+/* see description in first occurence
+/* If we remove r12, r13 from the list, we get a {r4-r11, lr} = r4,r5,r6,r7,r8,r9,r10,r11,r14 = 9 registers = 36 bytes. => B1NG0
+	ldmdb   r1!, {r4-r14}		 // restore registers */
+	ldmdb   r1!, {r4-r11, lr}/* restore registers */
+/* gtel3g thumb build stop */
 #if 0
 3:	b 3b
 	mov r0, #'Y'

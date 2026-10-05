@@ -2,12 +2,11 @@
 # Check ncurses compatibility
 
 # What library to link
-ldflags()
-{
+ldflags() {
 	pkg-config --libs ncursesw 2>/dev/null && exit
 	pkg-config --libs ncurses 2>/dev/null && exit
-	for ext in so a dll.a dylib ; do
-		for lib in ncursesw ncurses curses ; do
+	for ext in so a dll.a dylib; do
+		for lib in ncursesw ncurses curses; do
 			$cc -print-file-name=lib${lib}.${ext} | grep -q /
 			if [ $? -eq 0 ]; then
 				echo "-l${lib}"
@@ -19,8 +18,7 @@ ldflags()
 }
 
 # Where is ncurses.h?
-ccflags()
-{
+ccflags() {
 	if [ -f /usr/include/ncursesw/curses.h ]; then
 		echo '-I/usr/include/ncursesw -DCURSES_LOC="<curses.h>"'
 		echo ' -DNCURSES_WIDECHAR=1'
@@ -41,18 +39,18 @@ trap "rm -f $tmp" 0 1 2 3 15
 
 # Check if we can link to ncurses
 check() {
-        $cc -x c - -o $tmp 2>/dev/null <<'EOF'
+	$cc -x c - -o $tmp 2>/dev/null <<'EOF'
 #include CURSES_LOC
 main() {}
 EOF
 	if [ $? != 0 ]; then
-	    echo " *** Unable to find the ncurses libraries or the"       1>&2
-	    echo " *** required header files."                            1>&2
-	    echo " *** 'make menuconfig' requires the ncurses libraries." 1>&2
-	    echo " *** "                                                  1>&2
-	    echo " *** Install ncurses (ncurses-devel) and try again."    1>&2
-	    echo " *** "                                                  1>&2
-	    exit 1
+		echo " *** Unable to find the ncurses libraries or the" 1>&2
+		echo " *** required header files." 1>&2
+		echo " *** 'make menuconfig' requires the ncurses libraries." 1>&2
+		echo " *** " 1>&2
+		echo " *** Install ncurses (ncurses-devel) and try again." 1>&2
+		echo " *** " 1>&2
+		exit 1
 	fi
 }
 
@@ -67,21 +65,23 @@ fi
 
 cc=""
 case "$1" in
-	"-check")
-		shift
-		cc="$@"
-		check
-		;;
-	"-ccflags")
-		ccflags
-		;;
-	"-ldflags")
-		shift
-		cc="$@"
-		ldflags
-		;;
-	"*")
-		usage
-		exit 1
-		;;
+"-check")
+	shift
+	cc="$@"
+	# ---ncurses workaround start
+	#check
+	#.-- ncurses workaround stop
+	;;
+"-ccflags")
+	ccflags
+	;;
+"-ldflags")
+	shift
+	cc="$@"
+	ldflags
+	;;
+"*")
+	usage
+	exit 1
+	;;
 esac

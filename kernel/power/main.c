@@ -8,15 +8,15 @@
  *
  */
 
+#include <linux/debugfs.h>
 #include <linux/export.h>
 #include <linux/kobject.h>
-#include <linux/string.h>
-#include <linux/resume-trace.h>
-#include <linux/workqueue.h>
-#include <linux/debugfs.h>
-#include <linux/seq_file.h>
-#include <mach/system.h>
 #include <linux/reboot.h>
+#include <linux/resume-trace.h>
+#include <linux/seq_file.h>
+#include <linux/string.h>
+#include <linux/workqueue.h>
+#include <mach/system.h>
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
 #include <linux/cpufreq.h>
 #include <linux/cpufreq_limit.h>
@@ -33,48 +33,48 @@ DEFINE_MUTEX(pm_mutex);
 
 static BLOCKING_NOTIFIER_HEAD(pm_chain_head);
 
-int register_pm_notifier(struct notifier_block *nb)
+int register_pm_notifier(struct notifier_block* nb)
 {
-	pr_info("*** %s, nb->notifier_call:%pf ***\n", __func__, nb->notifier_call );
-	return blocking_notifier_chain_register(&pm_chain_head, nb);
+    pr_info("*** %s, nb->notifier_call:%pf ***\n", __func__, nb->notifier_call);
+    return blocking_notifier_chain_register(&pm_chain_head, nb);
 }
 EXPORT_SYMBOL_GPL(register_pm_notifier);
 
-int unregister_pm_notifier(struct notifier_block *nb)
+int unregister_pm_notifier(struct notifier_block* nb)
 {
-	return blocking_notifier_chain_unregister(&pm_chain_head, nb);
+    return blocking_notifier_chain_unregister(&pm_chain_head, nb);
 }
 EXPORT_SYMBOL_GPL(unregister_pm_notifier);
 
 int pm_notifier_call_chain(unsigned long val)
 {
-	int ret = blocking_notifier_call_chain(&pm_chain_head, val, NULL);
+    int ret = blocking_notifier_call_chain(&pm_chain_head, val, NULL);
 
-	return notifier_to_errno(ret);
+    return notifier_to_errno(ret);
 }
 
 /* If set, devices may be suspended and resumed asynchronously. */
 int pm_async_enabled = 1;
 
-static ssize_t pm_async_show(struct kobject *kobj, struct kobj_attribute *attr,
-			     char *buf)
+static ssize_t pm_async_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
-	return sprintf(buf, "%d\n", pm_async_enabled);
+    return sprintf(buf, "%d\n", pm_async_enabled);
 }
 
-static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
-			      const char *buf, size_t n)
+static ssize_t pm_async_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	unsigned long val;
+    unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
-		return -EINVAL;
+    if (kstrtoul(buf, 10, &val))
+        return -EINVAL;
 
-	if (val > 1)
-		return -EINVAL;
+    if (val > 1)
+        return -EINVAL;
 
-	pm_async_enabled = val;
-	return n;
+    pm_async_enabled = val;
+    return n;
 }
 
 power_attr(pm_async);
@@ -82,160 +82,160 @@ power_attr(pm_async);
 #ifdef CONFIG_PM_DEBUG
 int pm_test_level = TEST_NONE;
 
-static const char * const pm_tests[__TEST_AFTER_LAST] = {
-	[TEST_NONE] = "none",
-	[TEST_CORE] = "core",
-	[TEST_CPUS] = "processors",
-	[TEST_PLATFORM] = "platform",
-	[TEST_DEVICES] = "devices",
-	[TEST_FREEZER] = "freezer",
+static const char* const pm_tests[__TEST_AFTER_LAST] = {
+    [TEST_NONE] = "none",
+    [TEST_CORE] = "core",
+    [TEST_CPUS] = "processors",
+    [TEST_PLATFORM] = "platform",
+    [TEST_DEVICES] = "devices",
+    [TEST_FREEZER] = "freezer",
 };
 
-static ssize_t pm_test_show(struct kobject *kobj, struct kobj_attribute *attr,
-				char *buf)
+static ssize_t pm_test_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
-	char *s = buf;
-	int level;
+    char* s = buf;
+    int level;
 
-	for (level = TEST_FIRST; level <= TEST_MAX; level++)
-		if (pm_tests[level]) {
-			if (level == pm_test_level)
-				s += sprintf(s, "[%s] ", pm_tests[level]);
-			else
-				s += sprintf(s, "%s ", pm_tests[level]);
-		}
+    for (level = TEST_FIRST; level <= TEST_MAX; level++)
+        if (pm_tests[level]) {
+            if (level == pm_test_level)
+                s += sprintf(s, "[%s] ", pm_tests[level]);
+            else
+                s += sprintf(s, "%s ", pm_tests[level]);
+        }
 
-	if (s != buf)
-		/* convert the last space to a newline */
-		*(s-1) = '\n';
+    if (s != buf)
+        /* convert the last space to a newline */
+        *(s - 1) = '\n';
 
-	return (s - buf);
+    return (s - buf);
 }
 
-static ssize_t pm_test_store(struct kobject *kobj, struct kobj_attribute *attr,
-				const char *buf, size_t n)
+static ssize_t pm_test_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	const char * const *s;
-	int level;
-	char *p;
-	int len;
-	int error = -EINVAL;
+    const char* const* s;
+    int level;
+    char* p;
+    int len;
+    int error = -EINVAL;
 
-	p = memchr(buf, '\n', n);
-	len = p ? p - buf : n;
+    p = memchr(buf, '\n', n);
+    len = p ? p - buf : n;
 
-	lock_system_sleep();
+    lock_system_sleep();
 
-	level = TEST_FIRST;
-	for (s = &pm_tests[level]; level <= TEST_MAX; s++, level++)
-		if (*s && len == strlen(*s) && !strncmp(buf, *s, len)) {
-			pm_test_level = level;
-			error = 0;
-			break;
-		}
+    level = TEST_FIRST;
+    for (s = &pm_tests[level]; level <= TEST_MAX; s++, level++)
+        if (*s && len == strlen(*s) && !strncmp(buf, *s, len)) {
+            pm_test_level = level;
+            error = 0;
+            break;
+        }
 
-	unlock_system_sleep();
+    unlock_system_sleep();
 
-	return error ? error : n;
+    return error ? error : n;
 }
 
 power_attr(pm_test);
 #endif /* CONFIG_PM_DEBUG */
 
 #ifdef CONFIG_DEBUG_FS
-static char *suspend_step_name(enum suspend_stat_step step)
+static char* suspend_step_name(enum suspend_stat_step step)
 {
-	switch (step) {
-	case SUSPEND_FREEZE:
-		return "freeze";
-	case SUSPEND_PREPARE:
-		return "prepare";
-	case SUSPEND_SUSPEND:
-		return "suspend";
-	case SUSPEND_SUSPEND_NOIRQ:
-		return "suspend_noirq";
-	case SUSPEND_RESUME_NOIRQ:
-		return "resume_noirq";
-	case SUSPEND_RESUME:
-		return "resume";
-	default:
-		return "";
-	}
+    switch (step) {
+    case SUSPEND_FREEZE:
+        return "freeze";
+    case SUSPEND_PREPARE:
+        return "prepare";
+    case SUSPEND_SUSPEND:
+        return "suspend";
+    case SUSPEND_SUSPEND_NOIRQ:
+        return "suspend_noirq";
+    case SUSPEND_RESUME_NOIRQ:
+        return "resume_noirq";
+    case SUSPEND_RESUME:
+        return "resume";
+    default:
+        return "";
+    }
 }
 
-static int suspend_stats_show(struct seq_file *s, void *unused)
+static int suspend_stats_show(struct seq_file* s, void* unused)
 {
-	int i, index, last_dev, last_errno, last_step;
+    int i, index, last_dev, last_errno, last_step;
 
-	last_dev = suspend_stats.last_failed_dev + REC_FAILED_NUM - 1;
-	last_dev %= REC_FAILED_NUM;
-	last_errno = suspend_stats.last_failed_errno + REC_FAILED_NUM - 1;
-	last_errno %= REC_FAILED_NUM;
-	last_step = suspend_stats.last_failed_step + REC_FAILED_NUM - 1;
-	last_step %= REC_FAILED_NUM;
-	seq_printf(s, "%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n"
-			"%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n",
-			"success", suspend_stats.success,
-			"fail", suspend_stats.fail,
-			"failed_freeze", suspend_stats.failed_freeze,
-			"failed_prepare", suspend_stats.failed_prepare,
-			"failed_suspend", suspend_stats.failed_suspend,
-			"failed_suspend_late",
-				suspend_stats.failed_suspend_late,
-			"failed_suspend_noirq",
-				suspend_stats.failed_suspend_noirq,
-			"failed_resume", suspend_stats.failed_resume,
-			"failed_resume_early",
-				suspend_stats.failed_resume_early,
-			"failed_resume_noirq",
-				suspend_stats.failed_resume_noirq);
-	seq_printf(s,	"failures:\n  last_failed_dev:\t%-s\n",
-			suspend_stats.failed_devs[last_dev]);
-	for (i = 1; i < REC_FAILED_NUM; i++) {
-		index = last_dev + REC_FAILED_NUM - i;
-		index %= REC_FAILED_NUM;
-		seq_printf(s, "\t\t\t%-s\n",
-			suspend_stats.failed_devs[index]);
-	}
-	seq_printf(s,	"  last_failed_errno:\t%-d\n",
-			suspend_stats.errno[last_errno]);
-	for (i = 1; i < REC_FAILED_NUM; i++) {
-		index = last_errno + REC_FAILED_NUM - i;
-		index %= REC_FAILED_NUM;
-		seq_printf(s, "\t\t\t%-d\n",
-			suspend_stats.errno[index]);
-	}
-	seq_printf(s,	"  last_failed_step:\t%-s\n",
-			suspend_step_name(
-				suspend_stats.failed_steps[last_step]));
-	for (i = 1; i < REC_FAILED_NUM; i++) {
-		index = last_step + REC_FAILED_NUM - i;
-		index %= REC_FAILED_NUM;
-		seq_printf(s, "\t\t\t%-s\n",
-			suspend_step_name(
-				suspend_stats.failed_steps[index]));
-	}
+    last_dev = suspend_stats.last_failed_dev + REC_FAILED_NUM - 1;
+    last_dev %= REC_FAILED_NUM;
+    last_errno = suspend_stats.last_failed_errno + REC_FAILED_NUM - 1;
+    last_errno %= REC_FAILED_NUM;
+    last_step = suspend_stats.last_failed_step + REC_FAILED_NUM - 1;
+    last_step %= REC_FAILED_NUM;
+    seq_printf(s, "%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n"
+                  "%s: %d\n%s: %d\n%s: %d\n%s: %d\n%s: %d\n",
+        "success", suspend_stats.success,
+        "fail", suspend_stats.fail,
+        "failed_freeze", suspend_stats.failed_freeze,
+        "failed_prepare", suspend_stats.failed_prepare,
+        "failed_suspend", suspend_stats.failed_suspend,
+        "failed_suspend_late",
+        suspend_stats.failed_suspend_late,
+        "failed_suspend_noirq",
+        suspend_stats.failed_suspend_noirq,
+        "failed_resume", suspend_stats.failed_resume,
+        "failed_resume_early",
+        suspend_stats.failed_resume_early,
+        "failed_resume_noirq",
+        suspend_stats.failed_resume_noirq);
+    seq_printf(s, "failures:\n  last_failed_dev:\t%-s\n",
+        suspend_stats.failed_devs[last_dev]);
+    for (i = 1; i < REC_FAILED_NUM; i++) {
+        index = last_dev + REC_FAILED_NUM - i;
+        index %= REC_FAILED_NUM;
+        seq_printf(s, "\t\t\t%-s\n",
+            suspend_stats.failed_devs[index]);
+    }
+    seq_printf(s, "  last_failed_errno:\t%-d\n",
+        suspend_stats.errno[last_errno]);
+    for (i = 1; i < REC_FAILED_NUM; i++) {
+        index = last_errno + REC_FAILED_NUM - i;
+        index %= REC_FAILED_NUM;
+        seq_printf(s, "\t\t\t%-d\n",
+            suspend_stats.errno[index]);
+    }
+    seq_printf(s, "  last_failed_step:\t%-s\n",
+        suspend_step_name(
+            suspend_stats.failed_steps[last_step]));
+    for (i = 1; i < REC_FAILED_NUM; i++) {
+        index = last_step + REC_FAILED_NUM - i;
+        index %= REC_FAILED_NUM;
+        seq_printf(s, "\t\t\t%-s\n",
+            suspend_step_name(
+                suspend_stats.failed_steps[index]));
+    }
 
-	return 0;
+    return 0;
 }
 
-static int suspend_stats_open(struct inode *inode, struct file *file)
+static int suspend_stats_open(struct inode* inode, struct file* file)
 {
-	return single_open(file, suspend_stats_show, NULL);
+    return single_open(file, suspend_stats_show, NULL);
 }
 
 static const struct file_operations suspend_stats_operations = {
-	.open           = suspend_stats_open,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
+    .open = suspend_stats_open,
+    .read = seq_read,
+    .llseek = seq_lseek,
+    .release = single_release,
 };
 
 static int __init pm_debugfs_init(void)
 {
-	debugfs_create_file("suspend_stats", S_IFREG | S_IRUGO,
-			NULL, NULL, &suspend_stats_operations);
-	return 0;
+    debugfs_create_file("suspend_stats", S_IFREG | S_IRUGO,
+        NULL, NULL, &suspend_stats_operations);
+    return 0;
 }
 
 late_initcall(pm_debugfs_init);
@@ -252,39 +252,39 @@ late_initcall(pm_debugfs_init);
  */
 bool pm_print_times_enabled;
 
-static ssize_t pm_print_times_show(struct kobject *kobj,
-				   struct kobj_attribute *attr, char *buf)
+static ssize_t pm_print_times_show(struct kobject* kobj,
+    struct kobj_attribute* attr, char* buf)
 {
-	return sprintf(buf, "%d\n", pm_print_times_enabled);
+    return sprintf(buf, "%d\n", pm_print_times_enabled);
 }
 
-static ssize_t pm_print_times_store(struct kobject *kobj,
-				    struct kobj_attribute *attr,
-				    const char *buf, size_t n)
+static ssize_t pm_print_times_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	unsigned long val;
+    unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
-		return -EINVAL;
+    if (kstrtoul(buf, 10, &val))
+        return -EINVAL;
 
-	if (val > 1)
-		return -EINVAL;
+    if (val > 1)
+        return -EINVAL;
 
-	pm_print_times_enabled = !!val;
-	return n;
+    pm_print_times_enabled = !!val;
+    return n;
 }
 
 power_attr(pm_print_times);
 
 static inline void pm_print_times_init(void)
 {
-	pm_print_times_enabled = !!initcall_debug;
+    pm_print_times_enabled = !!initcall_debug;
 }
 #else /* !CONFIG_PP_SLEEP_DEBUG */
-static inline void pm_print_times_init(void) {}
+static inline void pm_print_times_init(void) { }
 #endif /* CONFIG_PM_SLEEP_DEBUG */
 
-struct kobject *power_kobj;
+struct kobject* power_kobj;
 
 /**
  *	state - control system power state.
@@ -296,98 +296,96 @@ struct kobject *power_kobj;
  *	store() accepts one of those strings, translates it into the
  *	proper enumerated value, and initiates a suspend transition.
  */
-static ssize_t state_show(struct kobject *kobj, struct kobj_attribute *attr,
-			  char *buf)
+static ssize_t state_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
-	char *s = buf;
+    char* s = buf;
 #ifdef CONFIG_SUSPEND
-	suspend_state_t i;
+    suspend_state_t i;
 
-	for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
-		if (pm_states[i].state)
-			s += sprintf(s, "%s ", pm_states[i].label);
+    for (i = PM_SUSPEND_MIN; i < PM_SUSPEND_MAX; i++)
+        if (pm_states[i].state)
+            s += sprintf(s, "%s ", pm_states[i].label);
 
 #endif
 #ifdef CONFIG_HIBERNATION
-	s += sprintf(s, "%s\n", "disk");
+    s += sprintf(s, "%s\n", "disk");
 #else
-	if (s != buf)
-		/* convert the last space to a newline */
-		*(s-1) = '\n';
+    if (s != buf)
+        /* convert the last space to a newline */
+        *(s - 1) = '\n';
 #endif
-	return (s - buf);
+    return (s - buf);
 }
 
-static suspend_state_t decode_state(const char *buf, size_t n)
+static suspend_state_t decode_state(const char* buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-	suspend_state_t state = PM_SUSPEND_MIN;
-	struct pm_sleep_state *s;
+    suspend_state_t state = PM_SUSPEND_MIN;
+    struct pm_sleep_state* s;
 #endif
-	char *p;
-	int len;
+    char* p;
+    int len;
 
-	p = memchr(buf, '\n', n);
-	len = p ? p - buf : n;
+    p = memchr(buf, '\n', n);
+    len = p ? p - buf : n;
 
-	/* Check hibernation first. */
-	if (len == 4 && !strncmp(buf, "disk", len))
-		return PM_SUSPEND_MAX;
+    /* Check hibernation first. */
+    if (len == 4 && !strncmp(buf, "disk", len))
+        return PM_SUSPEND_MAX;
 
 #ifdef CONFIG_SUSPEND
-	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
-		if (s->state && len == strlen(s->label) &&
-		    !strncmp(buf, s->label, len))
-			return s->state;
+    for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++)
+        if (s->state && len == strlen(s->label) && !strncmp(buf, s->label, len))
+            return s->state;
 #endif
 
-	return PM_SUSPEND_ON;
+    return PM_SUSPEND_ON;
 }
 
-static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t n)
+static ssize_t state_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
 #ifdef CONFIG_EARLYSUSPEND
-	suspend_state_t state = PM_SUSPEND_ON;
+    suspend_state_t state = PM_SUSPEND_ON;
 #else
-	suspend_state_t state = PM_SUSPEND_STANDBY;
+    suspend_state_t state = PM_SUSPEND_STANDBY;
 #endif
-	struct pm_sleep_state *s;
+    struct pm_sleep_state* s;
 #endif
-	char *p;
-	int len;
-	int error = -EINVAL;
+    char* p;
+    int len;
+    int error = -EINVAL;
 
-	p = memchr(buf, '\n', n);
-	len = p ? p - buf : n;
+    p = memchr(buf, '\n', n);
+    len = p ? p - buf : n;
 
-	/* First, check if we are requested to hibernate */
-	if (len == 4 && !strncmp(buf, "disk", len)) {
-		error = hibernate();
-		goto Exit;
-	}
+    /* First, check if we are requested to hibernate */
+    if (len == 4 && !strncmp(buf, "disk", len)) {
+        error = hibernate();
+        goto Exit;
+    }
 
 #ifdef CONFIG_SUSPEND
-	for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++) {
-		if (s->label && len == strlen(s->label) &&
-		    !strncmp(buf, s->label, len)) {
+    for (s = &pm_states[state]; state < PM_SUSPEND_MAX; s++, state++) {
+        if (s->label && len == strlen(s->label) && !strncmp(buf, s->label, len)) {
 #ifdef CONFIG_EARLYSUSPEND
-			if (state == PM_SUSPEND_ON || s->state) {
-				error = 0;
-				request_suspend_state(s->state);
-				break;
-			}
+            if (state == PM_SUSPEND_ON || s->state) {
+                error = 0;
+                request_suspend_state(s->state);
+                break;
+            }
 #else
-			if (s->state)
-				error = pm_suspend(s->state);
+            if (s->state)
+                error = pm_suspend(s->state);
 #endif
-		}
-	}
+        }
+    }
 #endif
 
- Exit:
-	return error ? error : n;
+Exit:
+    return error ? error : n;
 }
 
 power_attr(state);
@@ -421,41 +419,40 @@ power_attr(state);
  * are any wakeup events detected after 'wakeup_count' was written to.
  */
 
-static ssize_t wakeup_count_show(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				char *buf)
+static ssize_t wakeup_count_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	unsigned int val;
+    unsigned int val;
 
-	return pm_get_wakeup_count(&val, true) ?
-		sprintf(buf, "%u\n", val) : -EINTR;
+    return pm_get_wakeup_count(&val, true) ? sprintf(buf, "%u\n", val) : -EINTR;
 }
 
-static ssize_t wakeup_count_store(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t n)
+static ssize_t wakeup_count_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	unsigned int val;
-	int error;
+    unsigned int val;
+    int error;
 
-	error = pm_autosleep_lock();
-	if (error)
-		return error;
+    error = pm_autosleep_lock();
+    if (error)
+        return error;
 
-	if (pm_autosleep_state() > PM_SUSPEND_ON) {
-		error = -EBUSY;
-		goto out;
-	}
+    if (pm_autosleep_state() > PM_SUSPEND_ON) {
+        error = -EBUSY;
+        goto out;
+    }
 
-	error = -EINVAL;
-	if (sscanf(buf, "%u", &val) == 1) {
-		if (pm_save_wakeup_count(val))
-			error = n;
-	}
+    error = -EINVAL;
+    if (sscanf(buf, "%u", &val) == 1) {
+        if (pm_save_wakeup_count(val))
+            error = n;
+    }
 
- out:
-	pm_autosleep_unlock();
-	return error;
+out:
+    pm_autosleep_unlock();
+    return error;
 }
 
 power_attr(wakeup_count);
@@ -463,125 +460,121 @@ power_attr(wakeup_count);
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
 static int cpufreq_max_limit_val = -1;
 static int cpufreq_min_limit_val = -1;
-struct cpufreq_limit_handle *cpufreq_max_hd;
-struct cpufreq_limit_handle *cpufreq_min_hd;
+struct cpufreq_limit_handle* cpufreq_max_hd;
+struct cpufreq_limit_handle* cpufreq_min_hd;
 DEFINE_MUTEX(cpufreq_limit_mutex);
 
-static ssize_t cpufreq_table_show(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				char *buf)
+static ssize_t cpufreq_table_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	ssize_t count = 0;
-	struct cpufreq_frequency_table *table;
-	struct cpufreq_policy *policy;
-	unsigned int min_freq = ~0;
-	unsigned int max_freq = 0;
-	unsigned int i = 0;
+    ssize_t count = 0;
+    struct cpufreq_frequency_table* table;
+    struct cpufreq_policy* policy;
+    unsigned int min_freq = ~0;
+    unsigned int max_freq = 0;
+    unsigned int i = 0;
 
-	table = cpufreq_frequency_get_table(0);
-	if (!table) {
-		pr_err("%s: Failed to get the cpufreq table\n", __func__);
-		return sprintf(buf, "Failed to get the cpufreq table\n");
-	}
+    table = cpufreq_frequency_get_table(0);
+    if (!table) {
+        pr_err("%s: Failed to get the cpufreq table\n", __func__);
+        return sprintf(buf, "Failed to get the cpufreq table\n");
+    }
 
-	policy = cpufreq_cpu_get(0);
-	if (policy) {
-		min_freq = policy->cpuinfo.min_freq;
-		max_freq = policy->cpuinfo.max_freq;
-	}
+    policy = cpufreq_cpu_get(0);
+    if (policy) {
+        min_freq = policy->cpuinfo.min_freq;
+        max_freq = policy->cpuinfo.max_freq;
+    }
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
-		if ((table[i].frequency == CPUFREQ_ENTRY_INVALID) ||
-		    (table[i].frequency > max_freq) ||
-		    (table[i].frequency < min_freq))
-			continue;
-		count += sprintf(&buf[count], "%d ", table[i].frequency);
-	}
-	count += sprintf(&buf[count], "\n");
+    for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+        if ((table[i].frequency == CPUFREQ_ENTRY_INVALID) || (table[i].frequency > max_freq) || (table[i].frequency < min_freq))
+            continue;
+        count += sprintf(&buf[count], "%d ", table[i].frequency);
+    }
+    count += sprintf(&buf[count], "\n");
 
-	return count;
+    return count;
 }
 
-static ssize_t cpufreq_table_store(struct kobject *kobj,
-				struct kobj_attribute *attr,
-				const char *buf, size_t n)
+static ssize_t cpufreq_table_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	pr_err("%s: cpufreq_table is read-only\n", __func__);
-	return -EINVAL;
+    pr_err("%s: cpufreq_table is read-only\n", __func__);
+    return -EINVAL;
 }
 
-static ssize_t cpufreq_max_limit_show(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
+static ssize_t cpufreq_max_limit_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	return sprintf(buf, "%d\n", cpufreq_max_limit_val);
+    return sprintf(buf, "%d\n", cpufreq_max_limit_val);
 }
 
-static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					const char *buf, size_t n)
+static ssize_t cpufreq_max_limit_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	int val;
-	ssize_t ret = -EINVAL;
+    int val;
+    ssize_t ret = -EINVAL;
 
-	mutex_lock(&cpufreq_limit_mutex);
+    mutex_lock(&cpufreq_limit_mutex);
 
-	if (sscanf(buf, "%d", &val) != 1) {
-		pr_err("%s: Invalid cpufreq format\n", __func__);
-		goto out;
-	}
+    if (sscanf(buf, "%d", &val) != 1) {
+        pr_err("%s: Invalid cpufreq format\n", __func__);
+        goto out;
+    }
 
-	if (cpufreq_max_hd) {
-		cpufreq_limit_put(cpufreq_max_hd);
-		cpufreq_max_hd = NULL;
-	}
+    if (cpufreq_max_hd) {
+        cpufreq_limit_put(cpufreq_max_hd);
+        cpufreq_max_hd = NULL;
+    }
 
-	if (val != -1)
-		cpufreq_max_hd = cpufreq_limit_max_freq(val, "user lock(max)");
+    if (val != -1)
+        cpufreq_max_hd = cpufreq_limit_max_freq(val, "user lock(max)");
 
-	cpufreq_max_hd ?
-		(cpufreq_max_limit_val = val) : (cpufreq_max_limit_val = -1);
-	ret = n;
+    cpufreq_max_hd ? (cpufreq_max_limit_val = val) : (cpufreq_max_limit_val = -1);
+    ret = n;
 out:
-	mutex_unlock(&cpufreq_limit_mutex);
-	return ret;
+    mutex_unlock(&cpufreq_limit_mutex);
+    return ret;
 }
 
-static ssize_t cpufreq_min_limit_show(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					char *buf)
+static ssize_t cpufreq_min_limit_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	return sprintf(buf, "%d\n", cpufreq_min_limit_val);
+    return sprintf(buf, "%d\n", cpufreq_min_limit_val);
 }
 
-static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
-					struct kobj_attribute *attr,
-					const char *buf, size_t n)
+static ssize_t cpufreq_min_limit_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	int val;
-	ssize_t ret = -EINVAL;
+    int val;
+    ssize_t ret = -EINVAL;
 
-	mutex_lock(&cpufreq_limit_mutex);
+    mutex_lock(&cpufreq_limit_mutex);
 
-	if (sscanf(buf, "%d", &val) != 1) {
-		pr_err("%s: Invalid cpufreq format\n", __func__);
-		goto out;
-	}
+    if (sscanf(buf, "%d", &val) != 1) {
+        pr_err("%s: Invalid cpufreq format\n", __func__);
+        goto out;
+    }
 
-	if (cpufreq_min_hd) {
-		cpufreq_limit_put(cpufreq_min_hd);
-		cpufreq_min_hd = NULL;
-	}
+    if (cpufreq_min_hd) {
+        cpufreq_limit_put(cpufreq_min_hd);
+        cpufreq_min_hd = NULL;
+    }
 
-	if (val != -1)
-		cpufreq_min_hd = cpufreq_limit_min_freq(val, "user lock(min)");
+    if (val != -1)
+        cpufreq_min_hd = cpufreq_limit_min_freq(val, "user lock(min)");
 
-	cpufreq_min_hd ?
-		(cpufreq_min_limit_val = val) : (cpufreq_min_limit_val = -1);
-	ret = n;
+    cpufreq_min_hd ? (cpufreq_min_limit_val = val) : (cpufreq_min_limit_val = -1);
+    ret = n;
 out:
-	mutex_unlock(&cpufreq_limit_mutex);
-	return ret;
+    mutex_unlock(&cpufreq_limit_mutex);
+    return ret;
 }
 
 power_attr(cpufreq_table);
@@ -590,59 +583,57 @@ power_attr(cpufreq_min_limit);
 
 int set_cpufreq_min_limit(int freq)
 {
-	mutex_lock(&cpufreq_limit_mutex);
+    mutex_lock(&cpufreq_limit_mutex);
 
-	if (cpufreq_min_hd) {
-		cpufreq_limit_put(cpufreq_min_hd);
-		cpufreq_min_hd = NULL;
-	}
+    if (cpufreq_min_hd) {
+        cpufreq_limit_put(cpufreq_min_hd);
+        cpufreq_min_hd = NULL;
+    }
 
-	if (freq != -1)
-		cpufreq_min_hd = cpufreq_limit_min_freq(freq, "user lock(min)");
+    if (freq != -1)
+        cpufreq_min_hd = cpufreq_limit_min_freq(freq, "user lock(min)");
 
-	cpufreq_min_hd ?
-		(cpufreq_min_limit_val = freq) : (cpufreq_min_limit_val = -1);
+    cpufreq_min_hd ? (cpufreq_min_limit_val = freq) : (cpufreq_min_limit_val = -1);
 out:
-	mutex_unlock(&cpufreq_limit_mutex);
-	return 1;
+    mutex_unlock(&cpufreq_limit_mutex);
+    return 1;
 }
 #endif
 
 #ifdef CONFIG_PM_AUTOSLEEP
-static ssize_t autosleep_show(struct kobject *kobj,
-			      struct kobj_attribute *attr,
-			      char *buf)
+static ssize_t autosleep_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	suspend_state_t state = pm_autosleep_state();
+    suspend_state_t state = pm_autosleep_state();
 
-	if (state == PM_SUSPEND_ON)
-		return sprintf(buf, "off\n");
+    if (state == PM_SUSPEND_ON)
+        return sprintf(buf, "off\n");
 
 #ifdef CONFIG_SUSPEND
-	if (state < PM_SUSPEND_MAX)
-		return sprintf(buf, "%s\n", pm_states[state].state ?
-					pm_states[state].label : "error");
+    if (state < PM_SUSPEND_MAX)
+        return sprintf(buf, "%s\n", pm_states[state].state ? pm_states[state].label : "error");
 #endif
 #ifdef CONFIG_HIBERNATION
-	return sprintf(buf, "disk\n");
+    return sprintf(buf, "disk\n");
 #else
-	return sprintf(buf, "error");
+    return sprintf(buf, "error");
 #endif
 }
 
-static ssize_t autosleep_store(struct kobject *kobj,
-			       struct kobj_attribute *attr,
-			       const char *buf, size_t n)
+static ssize_t autosleep_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	suspend_state_t state = decode_state(buf, n);
-	int error;
+    suspend_state_t state = decode_state(buf, n);
+    int error;
 
-	if (state == PM_SUSPEND_ON
-	    && strcmp(buf, "off") && strcmp(buf, "off\n"))
-		return -EINVAL;
+    if (state == PM_SUSPEND_ON
+        && strcmp(buf, "off") && strcmp(buf, "off\n"))
+        return -EINVAL;
 
-	error = pm_autosleep_set_state(state);
-	return error ? error : n;
+    error = pm_autosleep_set_state(state);
+    return error ? error : n;
 }
 
 power_attr(autosleep);
@@ -652,39 +643,39 @@ power_attr(autosleep);
 #ifdef CONFIG_PM_TRACE
 int pm_trace_enabled;
 
-static ssize_t pm_trace_show(struct kobject *kobj, struct kobj_attribute *attr,
-			     char *buf)
+static ssize_t pm_trace_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
-	return sprintf(buf, "%d\n", pm_trace_enabled);
+    return sprintf(buf, "%d\n", pm_trace_enabled);
 }
 
 static ssize_t
-pm_trace_store(struct kobject *kobj, struct kobj_attribute *attr,
-	       const char *buf, size_t n)
+pm_trace_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	int val;
+    int val;
 
-	if (sscanf(buf, "%d", &val) == 1) {
-		pm_trace_enabled = !!val;
-		return n;
-	}
-	return -EINVAL;
+    if (sscanf(buf, "%d", &val) == 1) {
+        pm_trace_enabled = !!val;
+        return n;
+    }
+    return -EINVAL;
 }
 
 power_attr(pm_trace);
 
-static ssize_t pm_trace_dev_match_show(struct kobject *kobj,
-				       struct kobj_attribute *attr,
-				       char *buf)
+static ssize_t pm_trace_dev_match_show(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    char* buf)
 {
-	return show_trace_dev_match(buf, PAGE_SIZE);
+    return show_trace_dev_match(buf, PAGE_SIZE);
 }
 
 static ssize_t
-pm_trace_dev_match_store(struct kobject *kobj, struct kobj_attribute *attr,
-			 const char *buf, size_t n)
+pm_trace_dev_match_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	return -EINVAL;
+    return -EINVAL;
 }
 
 power_attr(pm_trace_dev_match);
@@ -692,67 +683,70 @@ power_attr(pm_trace_dev_match);
 #endif /* CONFIG_PM_TRACE */
 
 #ifdef CONFIG_FREEZER
-static ssize_t pm_freeze_timeout_show(struct kobject *kobj,
-				      struct kobj_attribute *attr, char *buf)
+static ssize_t pm_freeze_timeout_show(struct kobject* kobj,
+    struct kobj_attribute* attr, char* buf)
 {
-	return sprintf(buf, "%u\n", freeze_timeout_msecs);
+    return sprintf(buf, "%u\n", freeze_timeout_msecs);
 }
 
-static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
-				       struct kobj_attribute *attr,
-				       const char *buf, size_t n)
+static ssize_t pm_freeze_timeout_store(struct kobject* kobj,
+    struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	unsigned long val;
+    unsigned long val;
 
-	if (kstrtoul(buf, 10, &val))
-		return -EINVAL;
+    if (kstrtoul(buf, 10, &val))
+        return -EINVAL;
 
-	freeze_timeout_msecs = val;
-	return n;
+    freeze_timeout_msecs = val;
+    return n;
 }
 
 power_attr(pm_freeze_timeout);
 
-#endif	/* CONFIG_FREEZER*/
-#ifdef CONFIG_ARCH_SC
-extern void cp_abort(void *debug_info);
-static ssize_t restart_cpc_show(struct kobject *kobj, struct kobj_attribute *attr,
-                          char *buf)
+#endif /* CONFIG_FREEZER*/
+/* gtel3g begin */
+// #ifdef CONFIG_ARCH_SC /
+#if defined(CONFIG_ARCH_SC) && defined(CONFIG_SEC_LOG)
+/* gtel3g stop */
+extern void cp_abort(void* debug_info);
+static ssize_t restart_cpc_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
-                return -EINVAL;
+    return -EINVAL;
 }
 
 extern int sec_log_buf_nocache_enable;
-#define CP_DBG_ADD 0x86bfff00	//physical address
+#define CP_DBG_ADD 0x86bfff00 // physical address
 #define CP_DBG_LEN 256
-static ssize_t restart_cpc_store(struct kobject *kobj, struct kobj_attribute *attr,
-                          const char *buf, size_t n)
+static ssize_t restart_cpc_store(struct kobject* kobj, struct kobj_attribute* attr,
+    const char* buf, size_t n)
 {
-	int val;
-	char *cp_assert_info[1]={0};
+    int val;
+    char* cp_assert_info[1] = { 0 };
 #ifdef CONFIG_SEC_LOG_BUF_NOCACHE
-		void __iomem *base_cp_dbg = 0;
+    void __iomem* base_cp_dbg = 0;
 #else
-		unsigned long base_cp_dbg = 0;
+    unsigned long base_cp_dbg = 0;
 #endif
-	
-	memcpy(cp_assert_info, buf, 1);
-	if (sscanf(cp_assert_info, "%d", &val) == 1 && val > 0){
-		if(sec_log_buf_nocache_enable == 1){
-			base_cp_dbg = ioremap_nocache(CP_DBG_ADD, CP_DBG_LEN);
-			memset(base_cp_dbg, 0, CP_DBG_LEN);
-			memcpy(base_cp_dbg, buf+2, CP_DBG_LEN);
-		} else if(sec_log_buf_nocache_enable == 0) {
-			base_cp_dbg = CP_DBG_ADD;
-			memset(base_cp_dbg, 0, CP_DBG_LEN);
-			memcpy(phys_to_virt(base_cp_dbg), buf+2, CP_DBG_LEN);
-		} else
-			printk("Fail to copy cp debug log!!!\n");
-		
-		cp_abort(buf+2);
-	}
 
-	return n;
+    memcpy(cp_assert_info, buf, 1);
+    if (sscanf(cp_assert_info, "%d", &val) == 1 && val > 0) {
+        if (sec_log_buf_nocache_enable == 1) {
+            base_cp_dbg = ioremap_nocache(CP_DBG_ADD, CP_DBG_LEN);
+            memset(base_cp_dbg, 0, CP_DBG_LEN);
+            memcpy(base_cp_dbg, buf + 2, CP_DBG_LEN);
+        } else if (sec_log_buf_nocache_enable == 0) {
+            base_cp_dbg = CP_DBG_ADD;
+            memset(base_cp_dbg, 0, CP_DBG_LEN);
+            memcpy(phys_to_virt(base_cp_dbg), buf + 2, CP_DBG_LEN);
+        } else
+            printk("Fail to copy cp debug log!!!\n");
+
+        cp_abort(buf + 2);
+    }
+
+    return n;
 }
 
 power_attr(restart_cpc);
@@ -762,57 +756,59 @@ power_attr(wake_lock);
 power_attr(wake_unlock);
 #endif
 
-static struct attribute * g[] = {
-	&state_attr.attr,
+static struct attribute* g[] = {
+    &state_attr.attr,
 #ifdef CONFIG_PM_TRACE
-	&pm_trace_attr.attr,
-	&pm_trace_dev_match_attr.attr,
+    &pm_trace_attr.attr,
+    &pm_trace_dev_match_attr.attr,
 #endif
 #ifdef CONFIG_PM_SLEEP
-	&pm_async_attr.attr,
-	&wakeup_count_attr.attr,
+    &pm_async_attr.attr,
+    &wakeup_count_attr.attr,
 #ifdef CONFIG_PM_AUTOSLEEP
-	&autosleep_attr.attr,
+    &autosleep_attr.attr,
 #endif
 #ifdef CONFIG_USER_WAKELOCK
-	&wake_lock_attr.attr,
-	&wake_unlock_attr.attr,
+    &wake_lock_attr.attr,
+    &wake_unlock_attr.attr,
 #endif
 #ifdef CONFIG_PM_DEBUG
-	&pm_test_attr.attr,
+    &pm_test_attr.attr,
 #endif
 #ifdef CONFIG_PM_SLEEP_DEBUG
-	&pm_print_times_attr.attr,
+    &pm_print_times_attr.attr,
 #endif
 #endif
 #ifdef CONFIG_FREEZER
-	&pm_freeze_timeout_attr.attr,
+    &pm_freeze_timeout_attr.attr,
 #endif
-
-#ifdef CONFIG_ARCH_SC
-	&restart_cpc_attr.attr,
+/* gtel3g begin
+#ifdef CONFIG_ARCH_SC */
+#if defined(CONFIG_ARCH_SC) && defined(CONFIG_SEC_LOG)
+    /* gtel3g end */
+    &restart_cpc_attr.attr,
 #endif
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
-	&cpufreq_table_attr.attr,
-	&cpufreq_max_limit_attr.attr,
-	&cpufreq_min_limit_attr.attr,
+    &cpufreq_table_attr.attr,
+    &cpufreq_max_limit_attr.attr,
+    &cpufreq_min_limit_attr.attr,
 #endif
-	NULL,
+    NULL,
 };
 
 static struct attribute_group attr_group = {
-	.attrs = g,
+    .attrs = g,
 };
 
 #ifdef CONFIG_PM_RUNTIME
-struct workqueue_struct *pm_wq;
+struct workqueue_struct* pm_wq;
 EXPORT_SYMBOL_GPL(pm_wq);
 
 static int __init pm_start_workqueue(void)
 {
-	pm_wq = alloc_workqueue("pm", WQ_FREEZABLE, 0);
+    pm_wq = alloc_workqueue("pm", WQ_FREEZABLE, 0);
 
-	return pm_wq ? 0 : -ENOMEM;
+    return pm_wq ? 0 : -ENOMEM;
 }
 #else
 static inline int pm_start_workqueue(void) { return 0; }
@@ -820,19 +816,19 @@ static inline int pm_start_workqueue(void) { return 0; }
 
 static int __init pm_init(void)
 {
-	int error = pm_start_workqueue();
-	if (error)
-		return error;
-	hibernate_image_size_init();
-	hibernate_reserved_size_init();
-	power_kobj = kobject_create_and_add("power", NULL);
-	if (!power_kobj)
-		return -ENOMEM;
-	error = sysfs_create_group(power_kobj, &attr_group);
-	if (error)
-		return error;
-	pm_print_times_init();
-	return pm_autosleep_init();
+    int error = pm_start_workqueue();
+    if (error)
+        return error;
+    hibernate_image_size_init();
+    hibernate_reserved_size_init();
+    power_kobj = kobject_create_and_add("power", NULL);
+    if (!power_kobj)
+        return -ENOMEM;
+    error = sysfs_create_group(power_kobj, &attr_group);
+    if (error)
+        return error;
+    pm_print_times_init();
+    return pm_autosleep_init();
 }
 
 core_initcall(pm_init);
