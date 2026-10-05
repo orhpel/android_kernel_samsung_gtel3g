@@ -61,6 +61,7 @@
 	.endm
 
 	.text
+	.arm
 	.align 12
 ENTRY(sc8830_standby_iram)
 sprd_pm_mapped_va:
