@@ -124,6 +124,14 @@ ORIG_CFLAGS := $(KBUILD_CFLAGS)
 KBUILD_CFLAGS = $(subst -pg, , $(ORIG_CFLAGS))
 endif
 
+# -fstack-protector-strong triggers protection checks in this code,
+# but it is being used too early to link to meaningful stack_chk logic.
+CFLAGS_atags_to_fdt.o := $(call cc-option, -fno-stack-protector)
+CFLAGS_fdt.o := $(call cc-option, -fno-stack-protector)
+CFLAGS_fdt_ro.o := $(call cc-option, -fno-stack-protector)
+CFLAGS_fdt_rw.o := $(call cc-option, -fno-stack-protector)
+CFLAGS_fdt_wip.o := $(call cc-option, -fno-stack-protector)
+
 ccflags-y := -fpic -mno-single-pic-base -fno-builtin -I$(obj)
 asflags-y := -DZIMAGE
 

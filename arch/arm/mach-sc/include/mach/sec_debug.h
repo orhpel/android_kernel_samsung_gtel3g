@@ -133,6 +133,8 @@ struct worker;
 struct work_struct;
 
 #ifdef CONFIG_SEC_DEBUG_SCHED_LOG
+//+gtel3g
+extern void __sec_debug_softirq_log(unsigned int irq, void* fn, int en);
 extern void __sec_debug_task_log(int cpu, struct task_struct* task);
 extern void __sec_debug_irq_log(unsigned int irq, void* fn, int en);
 extern void __sec_debug_work_log(struct worker* worker,

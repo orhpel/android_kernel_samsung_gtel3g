@@ -172,8 +172,11 @@ loop_wfe_other:
 	lsl	r2, r9
 	tst	r0, r2
 	beq	wfi_for_powerdown
-	mov	pc, #0x0			@if from idle, cpu pc should goto 0x0
-
+	/* gtel3g begin */
+	/* mov pc, #0x0 */
+	mov     r0, #0x0
+	bx      r0  @if from idle, cpu pc should goto 0x0
+	/* gtel3g end */
 wfi_for_powerdown:
 	wfi
 	b 	wfi_for_powerdown

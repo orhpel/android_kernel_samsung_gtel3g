@@ -362,12 +362,20 @@ ENTRY(memcmpksm)
 6:      mov         ip, r7, lsr r5
         ldr         r7, [r1], #4
         ldr         r0, [r4], #4
-        orr         ip, ip, r7, lsl r6
+        /*GTEL3G fix begin*/
+        /*orr         ip, ip, r7, lsl r6*/
+        lsl         r7, r7, r6
+        orr         ip, ip, r7
+        /*GTEL3G fix end*/
         eors        r0, r0, ip
         moveq       ip, r7, lsr r5
         ldreq       r7, [r1], #4
         ldreq       r0, [r4], #4
-        orreq       ip, ip, r7, lsl r6
+        /*GTEL3G fix begin*/
+        /*orreq       ip, ip, r7, lsl r6*/
+        lsleq       r7, r7, r6
+        orreq       ip, ip, r7
+        /*GTEL3G fix end*/
         eoreqs      r0, r0, ip
         bne         7f
         subs        r2, r2, #8
