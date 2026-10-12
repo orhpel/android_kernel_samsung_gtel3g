@@ -43,7 +43,7 @@
 
 #define GPU_GLITCH_FREE_DFS		0
 
-#ifdef CONFIG_MACH_GTEL3G
+#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
 #undef DFS_MAX_FREQ
 #define DFS_MAX_FREQ			512000
 #endif
@@ -58,7 +58,7 @@
 /*tshark 28nm*/
 #define DFS_FREQ_NUM			8
 
-#ifdef CONFIG_MACH_GTEL3G
+#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
 #define GPU_MAX_FREQ			512000
 #else
 #define GPU_MAX_FREQ			460800
@@ -257,7 +257,7 @@ static struct gpu_dfs_context gpu_dfs_ctx=
 /*tshark 28nm*/
 	.dfs_freq_list=
 	{
-#ifdef CONFIG_MACH_GTEL3G
+#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
 		/* 512 MHz: clk_312m / 1 */
 		&dfs_freq_full_list[8],
 		/* 460.8 MHz: clk_460m8 / 1 */
@@ -704,7 +704,7 @@ int  mali_power_initialize(struct platform_device *pdev)
 #endif
 	udelay(100);
 
-#ifdef CONFIG_MACH_GTEL3G
+#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
 	/*
 	 * SCX30G clock names describe the original PLL layout.
 	 * GTEL3G uses different PLL rates, so build DVFS from the
