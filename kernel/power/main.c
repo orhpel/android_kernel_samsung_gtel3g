@@ -8,15 +8,15 @@
  *
  */
 
+#include <linux/debugfs.h>
 #include <linux/export.h>
 #include <linux/kobject.h>
-#include <linux/string.h>
-#include <linux/resume-trace.h>
-#include <linux/workqueue.h>
-#include <linux/debugfs.h>
-#include <linux/seq_file.h>
-#include <mach/system.h>
 #include <linux/reboot.h>
+#include <linux/resume-trace.h>
+#include <linux/seq_file.h>
+#include <linux/string.h>
+#include <linux/workqueue.h>
+#include <mach/system.h>
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
 #include <linux/cpufreq.h>
 #include <linux/cpufreq_limit.h>
@@ -713,11 +713,14 @@ static ssize_t pm_freeze_timeout_store(struct kobject *kobj,
 
 power_attr(pm_freeze_timeout);
 
-#endif	/* CONFIG_FREEZER*/
-#ifdef CONFIG_ARCH_SC
-extern void cp_abort(void *debug_info);
-static ssize_t restart_cpc_show(struct kobject *kobj, struct kobj_attribute *attr,
-                          char *buf)
+#endif /* CONFIG_FREEZER*/
+/* gtel3g begin */
+// #ifdef CONFIG_ARCH_SC /
+#if defined(CONFIG_ARCH_SC) && defined(CONFIG_SEC_LOG)
+/* gtel3g stop */
+extern void cp_abort(void* debug_info);
+static ssize_t restart_cpc_show(struct kobject* kobj, struct kobj_attribute* attr,
+    char* buf)
 {
                 return -EINVAL;
 }
@@ -788,9 +791,11 @@ static struct attribute * g[] = {
 #ifdef CONFIG_FREEZER
 	&pm_freeze_timeout_attr.attr,
 #endif
-
-#ifdef CONFIG_ARCH_SC
-	&restart_cpc_attr.attr,
+/* gtel3g begin
+#ifdef CONFIG_ARCH_SC */
+#if defined(CONFIG_ARCH_SC) && defined(CONFIG_SEC_LOG)
+    /* gtel3g end */
+    &restart_cpc_attr.attr,
 #endif
 #ifdef CONFIG_CPU_FREQ_LIMIT_USERSPACE
 	&cpufreq_table_attr.attr,

@@ -70,7 +70,9 @@ case "$1" in
 	"-check")
 		shift
 		cc="$@"
-		check
+		# ---ncurses workaround start
+		#check
+		#.-- ncurses workaround stop
 		;;
 	"-ccflags")
 		ccflags

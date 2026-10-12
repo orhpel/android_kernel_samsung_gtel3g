@@ -27,7 +27,7 @@
 
 / {
 	model = "Spreadtrum SP7730G board";
-        sprd,sc-id = <8830 11 0x20000>;
+        qcom,msm-id = <8830 11 0x20000>;
 	chosen {
 		bootargs = "init=/init root=/dev/ram0 rw";
 		linux,initrd-start = <0x85500000>;

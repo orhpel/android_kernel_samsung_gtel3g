@@ -17,7 +17,7 @@
 #define SCI_IOMAP(x)	(SCI_IOMAP_BASE + (x))
 
 #ifndef SCI_ADDR
-#define SCI_ADDR(_b_, _o_)                              ( (u32)(_b_) + (_o_) )
+#define SCI_ADDR(_b_, _o_)                              ((u32)((u32)(_b_) + (_o_)))
 #endif
 
 #include <asm/sizes.h>

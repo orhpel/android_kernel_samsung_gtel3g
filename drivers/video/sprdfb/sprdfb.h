@@ -17,9 +17,9 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
-#include <linux/workqueue.h>
 #include <linux/semaphore.h>
 #include <linux/wait.h>
+#include <linux/workqueue.h>
 #ifdef CONFIG_FB_MMAP_CACHED
 #include <linux/mm_types.h>
 #endif
@@ -126,13 +126,16 @@ struct sprdfb_device {
 	uint16_t		enable;
 	uint16_t	 	dev_id; /*main_lcd, sub_lcd*/
 
-	uint32_t	bpp;
-			/*input bit per pixel*/
-#ifdef CONFIG_SEC_DEBUG
-	uint32_t	framebuffer_nr;	/*number of framebuffer*/
-#endif
-	uint16_t		panel_ready; /*panel has been inited by uboot*/
-	uint16_t		panel_if_type; /*panel IF*/
+    uint32_t bpp;
+    /*input bit per pixel*/
+    // start gtel3g
+    // removed #ifdef condition -> sprdfb_main.c references framebuffer_nr, even without CONFIG_SEC_DEBUG
+    // #ifdef CONFIG_SEC_DEBUG
+    uint32_t framebuffer_nr; /*number of framebuffer*/
+    // #endif
+    //  stop gtel3g
+    uint16_t panel_ready; /*panel has been inited by uboot*/
+    uint16_t panel_if_type; /*panel IF*/
 
 	union{
 		uint32_t	mcu_timing[MCU_LCD_TIMING_KIND_MAX];

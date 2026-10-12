@@ -177,6 +177,8 @@ static inline void sec_debug_timer_log(unsigned int type, void *fn)
 static inline void sec_debug_softirq_log(unsigned int irq, void *fn, int en)
 {
 	if (unlikely(sec_debug_level.en.kernel_fault))
+		__sec_debug_softirq_log(irq, fn, en);
+}
 #else
 static inline void sec_debug_softirq_log(unsigned int irq, void *fn, int en)
 {

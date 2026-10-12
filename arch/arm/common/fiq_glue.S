@@ -16,6 +16,7 @@
 #include <asm/assembler.h>
 
 		.text
+		.arm
 
 		.global fiq_glue_end
 

@@ -611,7 +611,11 @@ EXPORT_SYMBOL(wake_lock_active);
 
 static int wakelock_stats_open(struct inode *inode, struct file *file)
 {
+	// gtel3g begin
+	#ifdef CONFIG_WAKELOCK_STAT
 	return single_open(file, wakelock_stats_show, NULL);
+	#endif
+	// gtel3g end
 }
 
 static const struct file_operations wakelock_stats_fops = {
