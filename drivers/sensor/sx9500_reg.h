@@ -79,7 +79,7 @@ static const struct smtc_reg_data setup_reg[] = {
 	},
 	{
 		.reg = SX9500_CPS_CTRL2_REG,
-#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
+#if defined(CONFIG_MACH_GTEL3G)
 		.val = 0x6F,
 #else
 		.val = 0x77,
@@ -87,7 +87,7 @@ static const struct smtc_reg_data setup_reg[] = {
 	},
 	{
 		.reg = SX9500_CPS_CTRL3_REG,
-#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
+#if defined(CONFIG_MACH_GTEL3G)
 		.val = 0x02,
 #else
 		.val = 0x01,
@@ -115,7 +115,7 @@ static const struct smtc_reg_data setup_reg[] = {
 	},
 	{
 		.reg = SX9500_CPS_CTRL0_REG,
-#if defined(CONFIG_MACH_GTEL3G) || defined(CONFIG_MACH_GTELWIFI)
+#if defined(CONFIG_MACH_GTEL3G)
 		.val = 0x00,
 #else
 		.val = 0x20,
