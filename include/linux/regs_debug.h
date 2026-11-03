@@ -62,7 +62,10 @@ struct sprd_debug_regs_access{
 		})
 
 #endif
-#if defined(CONFIG_SEC_DEBUG)
+//+gtel++
+//#if defined(CONFIG_SEC_DEBUG)
+#if defined(CONFIG_SEC_DEBUG) && defined(CONFIG_SEC_DEBUG_REG_ACCESS)
+//+gtel--
 struct sec_debug_regs_access {
 	u32 vaddr;
 	u32 value;

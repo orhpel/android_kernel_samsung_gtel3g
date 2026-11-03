@@ -26,11 +26,14 @@
 #include <asm/tlbflush.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
+
+#ifdef CONFIG_SEC_LOG
 #ifdef CONFIG_SEC_LOG_LAST_KMSG
 #include <linux/proc_fs.h>
 #endif
 #ifdef CONFIG_SEC_LOG_BUF_NOCACHE
 #include <linux/memblock.h>
+#endif
 #endif
 
 /*
@@ -126,10 +129,12 @@ static int __init sec_log_setup(char *str)
 	return 0;
 	
 }
+#ifdef CONFIG_SEC_LOG
 #ifdef CONFIG_SEC_LOG_BUF_NOCACHE
 early_param("sec_log",sec_log_setup);
 #else
 __setup("sec_log=", sec_log_setup);
+#endif
 #endif
 
 #ifdef CONFIG_SEC_DEBUG_REG_ACCESS
@@ -255,7 +260,9 @@ static int __init sec_logbuf_conf_memtype(void)
 
 	return 0;
 }
+#ifdef CONFIG_SEC_LOG
 module_init(sec_logbuf_conf_memtype);
+#endif
 
 #ifdef CONFIG_SEC_LOG_LAST_KMSG
 static void __init sec_log_save_old(void)

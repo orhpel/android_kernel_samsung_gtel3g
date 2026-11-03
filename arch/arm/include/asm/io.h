@@ -142,13 +142,20 @@ extern struct sec_debug_regs_access *sec_debug_last_regs_access;
 #define __raw_writew(v,a)  ({if(sec_debug_last_regs_access) sec_debug_regs_write_start(v, a); \
                __chk_io_ptr(a); \
                *(volatile unsigned short __force  *)(a) = (v); \
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
                if(sec_debug_last_regs_access) sec_debug_regs_access_done(); \
+#endif
                })
-#define __raw_readw(a)     ({if(sec_debug_last_regs_access) sec_debug_regs_read_start(a);\
+#define __raw_readw(a)     ({ \
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
+               if(sec_debug_last_regs_access) sec_debug_regs_read_start(a);\
+#endif
                volatile unsigned short v;  \
                __chk_io_ptr(a); \
                v = *(volatile unsigned short __force  *)(a); \
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
                if(sec_debug_last_regs_access) sec_debug_regs_access_done(); \
+#endif
                v;\
                })
 #endif
@@ -161,42 +168,58 @@ extern struct sec_debug_regs_access *sec_debug_last_regs_access;
 #if defined(CONFIG_SPRD_DEBUG)
 static inline void __raw_writew(u16 val, volatile void __iomem *addr)
 {
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	sprd_debug_regs_write_start(val, addr);
+#endif
 	asm volatile("strh %1, %0"
 		     : "+Q" (*(volatile u16 __force *)addr)
 		     : "r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	sprd_debug_regs_access_done();
+#endif
 }
 
 static inline u16 __raw_readw(const volatile void __iomem *addr)
 {
 	u16 val;
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	sprd_debug_regs_read_start(addr);
+#endif
 	asm volatile("ldrh %1, %0"
 		     : "+Q" (*(volatile u16 __force *)addr),
 		       "=r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	sprd_debug_regs_access_done();
+#endif
 	return val;
 }
 #endif
 #if defined(CONFIG_SEC_DEBUG)
 static inline void __raw_writew(u16 val, volatile void __iomem *addr)
 {
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_write_start(val, addr);
+#endif
 	asm volatile("strh %1, %0"
 		     : "+Q" (*(volatile u16 __force *)addr)
 		     : "r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 }
 
 static inline u16 __raw_readw(const volatile void __iomem *addr)
 {
 	u16 val;
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_read_start(addr);
+#endif
 	asm volatile("ldrh %1, %0"
 		     : "+Q" (*(volatile u16 __force *)addr),
 		       "=r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 	return val;
 }
 #endif
@@ -245,41 +268,57 @@ static inline u32 __raw_readl(const volatile void __iomem *addr)
 #if defined(CONFIG_SEC_DEBUG)
 static inline void __raw_writeb(u8 val, volatile void __iomem *addr)
 {
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_write_start(val, addr);
+#endif
 	asm volatile("strb %1, %0"
 		     : "+Qo" (*(volatile u8 __force *)addr)
 		     : "r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 }
 
 static inline void __raw_writel(u32 val, volatile void __iomem *addr)
 {
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_write_start(val, addr);
+#endif
 	asm volatile("str %1, %0"
 		     : "+Qo" (*(volatile u32 __force *)addr)
 		     : "r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 }
 
 static inline u8 __raw_readb(const volatile void __iomem *addr)
 {
 	u8 val;
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_read_start(addr);
+#endif
 	asm volatile("ldrb %1, %0"
 		     : "+Qo" (*(volatile u8 __force *)addr),
 		       "=r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 	return val;
 }
 
 static inline u32 __raw_readl(const volatile void __iomem *addr)
 {
 	u32 val;
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_read_start(addr);
+#endif
 	asm volatile("ldr %1, %0"
 		     : "+Qo" (*(volatile u32 __force *)addr),
 		       "=r" (val));
+#if defined(CONFIG_SEC_DEBUG_REG_ACCESS)
 	if(sec_debug_last_regs_access) sec_debug_regs_access_done();
+#endif
 	return val;
 }
 #endif

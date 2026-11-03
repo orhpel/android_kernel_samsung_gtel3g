@@ -379,7 +379,7 @@ static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 	set_fs(fs);
 }
 
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG) && defined(CONFIG_SEC_LOG)
 void sec_debug_panic_message(int en);
 #endif
 void __show_regs(struct pt_regs *regs)
@@ -388,12 +388,12 @@ void __show_regs(struct pt_regs *regs)
 	char buf[64];
 
 	show_regs_print_info(KERN_DEFAULT);
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG) && defined(CONFIG_SEC_LOG)
 	sec_debug_panic_message(0);
 #endif
 	print_symbol("PC is at %s\n", instruction_pointer(regs));
 	print_symbol("LR is at %s\n", regs->ARM_lr);
-#ifdef CONFIG_SEC_DEBUG
+#if defined(CONFIG_SEC_DEBUG) && defined(CONFIG_SEC_LOG)
 	sec_debug_panic_message(1);
 #endif
 	printk("pc : [<%08lx>]    lr : [<%08lx>]    psr: %08lx\n"
